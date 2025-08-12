@@ -44,10 +44,10 @@ func main() {
 	// The FileServer would then look for a file named healthz in your filepathRoot.
 	// Since there isn't one, it would likely return a 404 Not Found error.
 
-	serve_mux.HandleFunc("GET /healthz", readinessHandler)
+	serve_mux.HandleFunc("GET /api/healthz", readinessHandler)
 
-	serve_mux.HandleFunc("GET /metrics", api_config.numberOfRequestsEncountered)
-	serve_mux.HandleFunc("POST /reset", api_config.resetFileServerHits)
+	serve_mux.HandleFunc("GET /api/metrics", api_config.numberOfRequestsEncountered)
+	serve_mux.HandleFunc("POST /api/reset", api_config.resetFileServerHits)
 
 	err := server.ListenAndServe()
 	if err != nil {
