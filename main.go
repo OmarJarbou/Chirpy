@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync/atomic"
 )
 
 const PORT string = "8080"
@@ -14,6 +15,10 @@ func main() {
 	server := http.Server{
 		Handler: serve_mux,
 		Addr:    ":" + PORT,
+	}
+
+	api_config := apiConfig{
+		fileserverHits: atomic.Int32{},
 	}
 
 	// option 1:
@@ -27,7 +32,7 @@ func main() {
 	// That way, "/app" prefex will be stripped out of the recieved url:
 	// "http://localhost:8080/app/[..path continue..]" (request url) => "http://localhost:8080/[..path continue..]" (stripped url)
 	// That way, the stripped url will exactly point to what found in root
-	serve_mux.Handle("/app/", http.StripPrefix("/app", http.FileServer(http.Dir("."))))
+	serve_mux.Handle("/app/", api_config.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
 
 	// Why we realy want app/ at the path and changed from / to it? To solve handling/routing conflicts for the incoming req:
 	// Initially, we had:
@@ -40,6 +45,9 @@ func main() {
 	// Since there isn't one, it would likely return a 404 Not Found error.
 
 	serve_mux.HandleFunc("/healthz", readinessHandler)
+
+	serve_mux.HandleFunc("/metrics/", api_config.numberOfRequestsEncountered)
+	serve_mux.HandleFunc("/reset/", api_config.resetFileServerHits)
 
 	err := server.ListenAndServe()
 	if err != nil {
