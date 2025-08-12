@@ -15,6 +15,8 @@ func main() {
 		Addr:    ":" + PORT,
 	}
 
+	serve_mux.Handle("/", http.FileServer(http.Dir(".")))
+
 	err := server.ListenAndServe()
 	if err != nil {
 		fmt.Println("Error while listening on port '"+PORT+"':", err)
