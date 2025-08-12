@@ -1,8 +1,9 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
+	"os"
 )
 
 const PORT string = "8080"
@@ -19,6 +20,7 @@ func main() {
 
 	err := server.ListenAndServe()
 	if err != nil {
-		fmt.Println("Error while listening on port '"+PORT+"':", err)
+		log.Fatal("Error while listening on port '"+PORT+"':", err)
+		os.Exit(1)
 	}
 }
