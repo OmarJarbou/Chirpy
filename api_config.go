@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"net/http"
 	"sync/atomic"
+
+	"github.com/OmarJarbou/Chirpy/internal/database"
 )
 
 // will hold any stateful, in-memory data we'll need to keep track of.
 type apiConfig struct {
 	fileserverHits atomic.Int32 // atomic.Int32 type is a really cool standard-library type that allows us to safely increment and read an integer value across multiple goroutines (HTTP requests).
+	DBQueries      *database.Queries
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {

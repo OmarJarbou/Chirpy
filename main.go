@@ -1,15 +1,30 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
 	"sync/atomic"
+
+	"github.com/OmarJarbou/Chirpy/internal/database"
+	"github.com/joho/godotenv"
 )
 
 const PORT string = "8080"
 
 func main() {
+	godotenv.Load()
+
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatal("Error while opening database: ", err)
+		os.Exit(1)
+	}
+
+	dbQueries := database.New(db)
+
 	serve_mux := http.NewServeMux()
 
 	server := http.Server{
@@ -19,6 +34,7 @@ func main() {
 
 	api_config := apiConfig{
 		fileserverHits: atomic.Int32{},
+		DBQueries:      dbQueries,
 	}
 
 	// option 1:
@@ -50,9 +66,9 @@ func main() {
 	serve_mux.HandleFunc("POST /admin/reset", api_config.resetFileServerHits)
 	serve_mux.HandleFunc("POST /api/validate_chirp", chirpValidator)
 
-	err := server.ListenAndServe()
-	if err != nil {
-		log.Fatal("Error while listening on port '"+PORT+"':", err)
+	err2 := server.ListenAndServe()
+	if err2 != nil {
+		log.Fatal("Error while listening on port '"+PORT+"':", err2)
 		os.Exit(1)
 	}
 }
