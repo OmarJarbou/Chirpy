@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
 )
 
 type chirpValidatorRequestBody struct {
@@ -14,7 +15,7 @@ type chirpValidatorErrorResponseBody struct {
 }
 
 type chirpValidatorSuccessResponseBody struct {
-	Valid bool `json:"valid"`
+	CleanedBody string `json:"cleaned_body"`
 }
 
 func chirpValidator(response_writer http.ResponseWriter, req *http.Request) {
@@ -37,8 +38,21 @@ func chirpValidator(response_writer http.ResponseWriter, req *http.Request) {
 		writeJSONResponse(response_writer, jsonResBody, err3, 400)
 		return
 	}
+	// good solution but it results in a string with all it's characters small:
+	// filtered_chirp := strings.ReplaceAll(strings.ToLower(reqBody.Body), "kerfuffle", "****")
+	// filtered_chirp = strings.ReplaceAll(filtered_chirp, "sharbert", "****")
+	// filtered_chirp = strings.ReplaceAll(filtered_chirp, "fornax", "****")
 
-	successResBody.Valid = true
+	banned := []string{"kerfuffle", "sharbert", "fornax"}
+
+	filtered_chirp := reqBody.Body
+	for _, word := range banned {
+		// `(?i)` makes the regex case-insensitive
+		re := regexp.MustCompile(`(?i)` + regexp.QuoteMeta(word))
+		filtered_chirp = re.ReplaceAllString(filtered_chirp, "****")
+	}
+
+	successResBody.CleanedBody = filtered_chirp
 	jsonResBody, err4 := json.Marshal(successResBody)
 
 	writeJSONResponse(response_writer, jsonResBody, err4, 200)
