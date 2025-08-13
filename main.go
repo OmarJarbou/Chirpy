@@ -48,6 +48,7 @@ func main() {
 
 	serve_mux.HandleFunc("GET /admin/metrics", api_config.numberOfRequestsEncountered)
 	serve_mux.HandleFunc("POST /admin/reset", api_config.resetFileServerHits)
+	serve_mux.HandleFunc("POST /api/validate_chirp", chirpValidator)
 
 	err := server.ListenAndServe()
 	if err != nil {
