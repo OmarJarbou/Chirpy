@@ -10,7 +10,7 @@ type chirpValidatorRequestBody struct {
 	Body string `json:"body"`
 }
 
-type chirpValidatorErrorResponseBody struct {
+type errorResponseBody struct {
 	Error string `json:"error"`
 }
 
@@ -20,7 +20,7 @@ type chirpValidatorSuccessResponseBody struct {
 
 func chirpValidator(response_writer http.ResponseWriter, req *http.Request) {
 	reqBody := chirpValidatorRequestBody{}
-	errorResBody := chirpValidatorErrorResponseBody{}
+	errorResBody := errorResponseBody{}
 	successResBody := chirpValidatorSuccessResponseBody{}
 	var jsonResBody []byte
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {

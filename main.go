@@ -9,6 +9,7 @@ import (
 
 	"github.com/OmarJarbou/Chirpy/internal/database"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 const PORT string = "8080"
@@ -65,6 +66,7 @@ func main() {
 	serve_mux.HandleFunc("GET /admin/metrics", api_config.numberOfRequestsEncountered)
 	serve_mux.HandleFunc("POST /admin/reset", api_config.resetFileServerHits)
 	serve_mux.HandleFunc("POST /api/validate_chirp", chirpValidator)
+	serve_mux.HandleFunc("POST /api/users", api_config.handleCreateUser)
 
 	err2 := server.ListenAndServe()
 	if err2 != nil {
