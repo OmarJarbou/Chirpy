@@ -23,13 +23,14 @@ type Chirp struct {
 }
 
 func (cfg *apiConfig) handleCreateChirp(response_writer http.ResponseWriter, req *http.Request) {
-	id, err := uuid.Parse(req.Context().Value("user_id").(string))
 	errorResBody := errorResponseBody{}
 	var jsonResBody []byte
+	id, err := uuid.Parse(req.Context().Value("user_id").(string))
 	if err != nil {
 		errorResBody.Error = "Invalid UUID: " + err.Error()
 		jsonResBody, err2 := json.Marshal(errorResBody)
 		writeJSONResponse(response_writer, jsonResBody, err2, 400)
+		return
 	}
 
 	createChirpParams := database.CreateChirpParams{
@@ -42,6 +43,7 @@ func (cfg *apiConfig) handleCreateChirp(response_writer http.ResponseWriter, req
 		errorResBody.Error = "Error while creating chirp: " + err3.Error()
 		jsonResBody, err4 := json.Marshal(errorResBody)
 		writeJSONResponse(response_writer, jsonResBody, err4, 500)
+		return
 	}
 
 	successResBody := Chirp{
@@ -63,6 +65,7 @@ func (cfg *apiConfig) handleGetAllChirps(response_writer http.ResponseWriter, re
 		errorResBody.Error = "Error while fetching chirps from database: " + err.Error()
 		jsonResBody, err2 := json.Marshal(errorResBody)
 		writeJSONResponse(response_writer, jsonResBody, err2, 500)
+		return
 	}
 
 	successResBody := []Chirp{}
@@ -79,4 +82,35 @@ func (cfg *apiConfig) handleGetAllChirps(response_writer http.ResponseWriter, re
 
 	jsonResBody, err3 := json.Marshal(successResBody)
 	writeJSONResponse(response_writer, jsonResBody, err3, 200)
+}
+
+func (cfg *apiConfig) handleGetChirpByID(response_writer http.ResponseWriter, req *http.Request) {
+	chirp_id := req.PathValue("chirpID")
+	errorResBody := errorResponseBody{}
+	var jsonResBody []byte
+	parsed_chirp_id, err := uuid.Parse(chirp_id)
+	if err != nil {
+		errorResBody.Error = "Invalid UUID: " + err.Error()
+		jsonResBody, err2 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err2, 400)
+		return
+	}
+
+	chirp, err3 := cfg.DBQueries.GetChirpById(req.Context(), parsed_chirp_id)
+	if err3 != nil {
+		errorResBody.Error = "Error while fetching chirp with id '" + chirp_id + "' from database: " + err3.Error()
+		jsonResBody, err4 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err4, 404)
+		return
+	}
+
+	successResBody := Chirp{
+		ID:        chirp.ID.String(),
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID.String(),
+	}
+	jsonResBody, err5 := json.Marshal(successResBody)
+	writeJSONResponse(response_writer, jsonResBody, err5, 200)
 }

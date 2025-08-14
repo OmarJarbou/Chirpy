@@ -68,6 +68,7 @@ func main() {
 	serve_mux.HandleFunc("POST /api/users", api_config.handleCreateUser)
 	serve_mux.Handle("POST /api/chirps", middlewareValidateChirp(http.HandlerFunc(api_config.handleCreateChirp)))
 	serve_mux.HandleFunc("GET /api/chirps", api_config.handleGetAllChirps)
+	serve_mux.HandleFunc("GET /api/chirps/{chirpID}", api_config.handleGetChirpByID)
 
 	err2 := server.ListenAndServe()
 	if err2 != nil {
