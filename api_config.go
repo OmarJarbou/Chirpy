@@ -20,13 +20,6 @@ type resetSuccessResponseBody struct {
 	Message string `json:"message"`
 }
 
-func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(response_writer http.ResponseWriter, req *http.Request) {
-		cfg.fileserverHits.Add(1)
-		next.ServeHTTP(response_writer, req)
-	})
-}
-
 func (cfg *apiConfig) numberOfRequestsEncountered(response_writer http.ResponseWriter, req *http.Request) {
 	response_writer.Header().Set("Content-Type", "text/html")
 	response_writer.WriteHeader(200)
