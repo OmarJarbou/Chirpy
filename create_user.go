@@ -4,10 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"github.com/OmarJarbou/Chirpy/internal/auth"
+	"github.com/OmarJarbou/Chirpy/internal/database"
 )
 
 type createUserRequestBody struct {
-	Email string `json:"email"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
 }
 
 type createUserSuccessResponseBody struct {
@@ -18,17 +22,22 @@ type createUserSuccessResponseBody struct {
 }
 
 func (cfg *apiConfig) handleCreateUser(response_writer http.ResponseWriter, req *http.Request) {
-	reqBody := createUserRequestBody{}
 	errorResBody := errorResponseBody{}
 	var jsonResBody []byte
-	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
-		errorResBody.Error = "Error while decoding request's json " + err.Error()
+
+	hashed, err := auth.HashPassword(req.Context().Value("password").(string))
+	if err != nil {
+		errorResBody.Error = err.Error()
 		jsonResBody, err2 := json.Marshal(errorResBody)
-		writeJSONResponse(response_writer, jsonResBody, err2, 500)
+		writeJSONResponse(response_writer, jsonResBody, err2, 400)
 		return
 	}
 
-	user, err3 := cfg.DBQueries.CreateUser(req.Context(), reqBody.Email)
+	db_user := database.CreateUserParams{
+		Email:          req.Context().Value("email").(string),
+		HashedPassword: hashed,
+	}
+	user, err3 := cfg.DBQueries.CreateUser(req.Context(), db_user)
 	if err3 != nil {
 		errorResBody.Error = "Error while creating user: " + err3.Error()
 		jsonResBody, err4 := json.Marshal(errorResBody)
