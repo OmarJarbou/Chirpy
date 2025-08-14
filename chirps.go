@@ -14,7 +14,7 @@ type createChirpRequestBody struct {
 	UserID string `json:"user_id"`
 }
 
-type createChirpSuccessResponseBody struct {
+type Chirp struct {
 	ID        string    `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -44,7 +44,7 @@ func (cfg *apiConfig) handleCreateChirp(response_writer http.ResponseWriter, req
 		writeJSONResponse(response_writer, jsonResBody, err4, 500)
 	}
 
-	successResBody := createChirpSuccessResponseBody{
+	successResBody := Chirp{
 		ID:        chirp.ID.String(),
 		CreatedAt: chirp.CreatedAt,
 		UpdatedAt: chirp.UpdatedAt,
@@ -53,4 +53,30 @@ func (cfg *apiConfig) handleCreateChirp(response_writer http.ResponseWriter, req
 	}
 	jsonResBody, err5 := json.Marshal(successResBody)
 	writeJSONResponse(response_writer, jsonResBody, err5, 201)
+}
+
+func (cfg *apiConfig) handleGetAllChirps(response_writer http.ResponseWriter, req *http.Request) {
+	errorResBody := errorResponseBody{}
+	var jsonResBody []byte
+	chirps, err := cfg.DBQueries.GetAllChirps(req.Context())
+	if err != nil {
+		errorResBody.Error = "Error while fetching chirps from database: " + err.Error()
+		jsonResBody, err2 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err2, 500)
+	}
+
+	successResBody := []Chirp{}
+
+	for _, chirp := range chirps {
+		successResBody = append(successResBody, Chirp{
+			ID:        chirp.ID.String(),
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID.String(),
+		})
+	}
+
+	jsonResBody, err3 := json.Marshal(successResBody)
+	writeJSONResponse(response_writer, jsonResBody, err3, 200)
 }
