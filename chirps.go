@@ -54,12 +54,33 @@ func (cfg *apiConfig) handleCreateChirp(response_writer http.ResponseWriter, req
 func (cfg *apiConfig) handleGetAllChirps(response_writer http.ResponseWriter, req *http.Request) {
 	errorResBody := errorResponseBody{}
 	var jsonResBody []byte
-	chirps, err := cfg.DBQueries.GetAllChirps(req.Context())
-	if err != nil {
-		errorResBody.Error = "Error while fetching chirps from database: " + err.Error()
-		jsonResBody, err2 := json.Marshal(errorResBody)
-		writeJSONResponse(response_writer, jsonResBody, err2, 500)
-		return
+
+	var chirps []database.Chirp
+	var err error
+	author_id := req.URL.Query().Get("author_id")
+	if author_id == "" {
+		chirps, err = cfg.DBQueries.GetAllChirps(req.Context())
+		if err != nil {
+			errorResBody.Error = "Error while fetching chirps from database: " + err.Error()
+			jsonResBody, err2 := json.Marshal(errorResBody)
+			writeJSONResponse(response_writer, jsonResBody, err2, 500)
+			return
+		}
+	} else {
+		author_uuid, err3 := uuid.Parse(author_id)
+		if err3 != nil {
+			errorResBody.Error = "Invalid UUID: " + err3.Error()
+			jsonResBody, err4 := json.Marshal(errorResBody)
+			writeJSONResponse(response_writer, jsonResBody, err4, 401)
+			return
+		}
+		chirps, err = cfg.DBQueries.GetAllChirpsForAUser(req.Context(), author_uuid)
+		if err != nil {
+			errorResBody.Error = "Error while fetching chirps for a user from database: " + err.Error()
+			jsonResBody, err5 := json.Marshal(errorResBody)
+			writeJSONResponse(response_writer, jsonResBody, err5, 401)
+			return
+		}
 	}
 
 	successResBody := []Chirp{}
