@@ -15,6 +15,7 @@ type apiConfig struct {
 	fileserverHits  atomic.Int32 // atomic.Int32 type is a really cool standard-library type that allows us to safely increment and read an integer value across multiple goroutines (HTTP requests).
 	DBQueries       *database.Queries
 	ChirpySecretKey string
+	PolkaKey        string
 }
 
 type resetSuccessResponseBody struct {

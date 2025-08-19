@@ -37,6 +37,7 @@ func main() {
 		fileserverHits:  atomic.Int32{},
 		DBQueries:       dbQueries,
 		ChirpySecretKey: os.Getenv("CHIRPY_SECRET_KEY"),
+		PolkaKey:        os.Getenv("POLKA_KEY"),
 	}
 
 	// option 1:
@@ -75,6 +76,8 @@ func main() {
 	serve_mux.Handle("DELETE /api/chirps/{chirpID}", api_config.middlewareAuthorize(http.HandlerFunc(api_config.handleDeleteChirp)))
 	serve_mux.HandleFunc("GET /api/chirps", api_config.handleGetAllChirps)
 	serve_mux.HandleFunc("GET /api/chirps/{chirpID}", api_config.handleGetChirpByID)
+
+	serve_mux.HandleFunc("POST /api/polka/webhooks", api_config.webhookHandler)
 
 	err2 := server.ListenAndServe()
 	if err2 != nil {

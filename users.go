@@ -23,20 +23,12 @@ type loginRequestBody struct {
 const DEFAULT_TOKEN_EXP_TIME = 3600
 const DEFAULT_REFRESH_TOKEN_EXP_TIME = 60 * 3600
 
-type updateUserSuccessResponseBody struct {
+type userSuccessResponseBody struct {
 	ID           string    `json:"id"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 	Email        string    `json:"email"`
-	Token        string    `json:"token"`
-	RefreshToken string    `json:"refresh_token"`
-}
-
-type createUserORLoginSuccessResponseBody struct {
-	ID           string    `json:"id"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	Email        string    `json:"email"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 	Token        string    `json:"token"`
 	RefreshToken string    `json:"refresh_token"`
 }
@@ -69,11 +61,12 @@ func (cfg *apiConfig) handleCreateUser(response_writer http.ResponseWriter, req 
 		return
 	}
 
-	successResBody := createUserORLoginSuccessResponseBody{
-		ID:        user.ID.String(),
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
+	successResBody := userSuccessResponseBody{
+		ID:          user.ID.String(),
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	}
 	jsonResBody, err5 := json.Marshal(successResBody)
 	writeJSONResponse(response_writer, jsonResBody, err5, 201)
@@ -140,11 +133,12 @@ func (cfg *apiConfig) handleLogin(response_writer http.ResponseWriter, req *http
 		return
 	}
 
-	successResBody := createUserORLoginSuccessResponseBody{
+	successResBody := userSuccessResponseBody{
 		ID:           user.ID.String(),
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 		Email:        user.Email,
+		IsChirpyRed:  user.IsChirpyRed,
 		Token:        token,
 		RefreshToken: refreshToken.Token,
 	}
@@ -246,11 +240,12 @@ func (cfg *apiConfig) handleUpdateUser(response_writer http.ResponseWriter, req 
 		return
 	}
 
-	successResBody := updateUserSuccessResponseBody{
-		ID:        user.ID.String(),
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
+	successResBody := userSuccessResponseBody{
+		ID:          user.ID.String(),
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	}
 	jsonResBody, err13 := json.Marshal(successResBody)
 	writeJSONResponse(response_writer, jsonResBody, err13, 200)
