@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/OmarJarbou/Chirpy/internal/database"
@@ -58,6 +59,7 @@ func (cfg *apiConfig) handleGetAllChirps(response_writer http.ResponseWriter, re
 	var chirps []database.Chirp
 	var err error
 	author_id := req.URL.Query().Get("author_id")
+	sortq := req.URL.Query().Get("sort")
 	if author_id == "" {
 		chirps, err = cfg.DBQueries.GetAllChirps(req.Context())
 		if err != nil {
@@ -81,6 +83,15 @@ func (cfg *apiConfig) handleGetAllChirps(response_writer http.ResponseWriter, re
 			writeJSONResponse(response_writer, jsonResBody, err5, 401)
 			return
 		}
+	}
+	if sortq == "asc" {
+		sort.SliceStable(chirps, func(i, j int) bool {
+			return chirps[i].CreatedAt.Before(chirps[j].CreatedAt)
+		})
+	} else if sortq == "desc" {
+		sort.SliceStable(chirps, func(i, j int) bool {
+			return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
+		})
 	}
 
 	successResBody := []Chirp{}
