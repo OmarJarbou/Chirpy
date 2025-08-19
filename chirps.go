@@ -25,13 +25,7 @@ type Chirp struct {
 func (cfg *apiConfig) handleCreateChirp(response_writer http.ResponseWriter, req *http.Request) {
 	errorResBody := errorResponseBody{}
 	var jsonResBody []byte
-	id, err := uuid.Parse(req.Context().Value("user_id").(string))
-	if err != nil {
-		errorResBody.Error = "Invalid UUID: " + err.Error()
-		jsonResBody, err2 := json.Marshal(errorResBody)
-		writeJSONResponse(response_writer, jsonResBody, err2, 400)
-		return
-	}
+	id := req.Context().Value("user_id").(uuid.UUID)
 
 	createChirpParams := database.CreateChirpParams{
 		Body:   req.Context().Value("filtered_chirp").(string),

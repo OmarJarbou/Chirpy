@@ -9,16 +9,25 @@ import (
 	"github.com/OmarJarbou/Chirpy/internal/database"
 )
 
-type createUserORLoginRequestBody struct {
+type createUserRequestBody struct {
 	Password string `json:"password"`
 	Email    string `json:"email"`
 }
+
+type loginRequestBody struct {
+	Password         string `json:"password"`
+	Email            string `json:"email"`
+	ExpiresInSeconds *int   `json:"expires_in_seconds"`
+}
+
+const DEFAULT_TOKEN_EXP_TIME = 3600
 
 type createUserORLoginSuccessResponseBody struct {
 	ID        string    `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     string    `json:"token"`
 }
 
 func (cfg *apiConfig) handleCreateUser(response_writer http.ResponseWriter, req *http.Request) {
@@ -56,7 +65,7 @@ func (cfg *apiConfig) handleCreateUser(response_writer http.ResponseWriter, req 
 }
 
 func (cfg *apiConfig) handleLogin(response_writer http.ResponseWriter, req *http.Request) {
-	reqBody := createUserORLoginRequestBody{}
+	reqBody := loginRequestBody{}
 	errorResBody := errorResponseBody{}
 	var jsonResBody []byte
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
@@ -83,12 +92,29 @@ func (cfg *apiConfig) handleLogin(response_writer http.ResponseWriter, req *http
 		return
 	}
 
+	var expirationSeconds int
+	if reqBody.ExpiresInSeconds == nil || *reqBody.ExpiresInSeconds < 0 || *reqBody.ExpiresInSeconds > 3600 {
+		expirationSeconds = DEFAULT_TOKEN_EXP_TIME
+	} else {
+		expirationSeconds = *reqBody.ExpiresInSeconds
+	}
+
+	duration := time.Duration(expirationSeconds) * time.Second
+	token, err7 := auth.MakeJWT(user.ID, cfg.ChirpySecretKey, duration)
+	if err7 != nil {
+		errorResBody.Error = err7.Error()
+		jsonResBody, err8 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err8, 400)
+		return
+	}
+
 	successResBody := createUserORLoginSuccessResponseBody{
 		ID:        user.ID.String(),
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
+		Token:     token,
 	}
-	jsonResBody, err7 := json.Marshal(successResBody)
-	writeJSONResponse(response_writer, jsonResBody, err7, 200)
+	jsonResBody, err9 := json.Marshal(successResBody)
+	writeJSONResponse(response_writer, jsonResBody, err9, 200)
 }

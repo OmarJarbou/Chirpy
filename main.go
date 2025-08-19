@@ -34,8 +34,9 @@ func main() {
 	}
 
 	api_config := apiConfig{
-		fileserverHits: atomic.Int32{},
-		DBQueries:      dbQueries,
+		fileserverHits:  atomic.Int32{},
+		DBQueries:       dbQueries,
+		ChirpySecretKey: os.Getenv("CHIRPY_SECRET_KEY"),
 	}
 
 	// option 1:
@@ -67,7 +68,7 @@ func main() {
 	serve_mux.HandleFunc("POST /admin/reset", api_config.resetFileServerHits)
 	serve_mux.Handle("POST /api/users", middlewareValidatePassword(http.HandlerFunc(api_config.handleCreateUser)))
 	serve_mux.HandleFunc("POST /api/login", api_config.handleLogin)
-	serve_mux.Handle("POST /api/chirps", middlewareValidateChirp(http.HandlerFunc(api_config.handleCreateChirp)))
+	serve_mux.Handle("POST /api/chirps", api_config.middlewareAuthorize(middlewareValidateChirp(http.HandlerFunc(api_config.handleCreateChirp))))
 	serve_mux.HandleFunc("GET /api/chirps", api_config.handleGetAllChirps)
 	serve_mux.HandleFunc("GET /api/chirps/{chirpID}", api_config.handleGetChirpByID)
 
