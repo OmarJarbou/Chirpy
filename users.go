@@ -15,19 +15,24 @@ type createUserRequestBody struct {
 }
 
 type loginRequestBody struct {
-	Password         string `json:"password"`
-	Email            string `json:"email"`
-	ExpiresInSeconds *int   `json:"expires_in_seconds"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
 }
 
 const DEFAULT_TOKEN_EXP_TIME = 3600
+const DEFAULT_REFRESH_TOKEN_EXP_TIME = 60 * 3600
 
 type createUserORLoginSuccessResponseBody struct {
-	ID        string    `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
+	ID           string    `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
+}
+
+type refreshSuccessResponseBody struct {
+	Token string `json:"token"`
 }
 
 func (cfg *apiConfig) handleCreateUser(response_writer http.ResponseWriter, req *http.Request) {
@@ -92,14 +97,7 @@ func (cfg *apiConfig) handleLogin(response_writer http.ResponseWriter, req *http
 		return
 	}
 
-	var expirationSeconds int
-	if reqBody.ExpiresInSeconds == nil || *reqBody.ExpiresInSeconds < 0 || *reqBody.ExpiresInSeconds > 3600 {
-		expirationSeconds = DEFAULT_TOKEN_EXP_TIME
-	} else {
-		expirationSeconds = *reqBody.ExpiresInSeconds
-	}
-
-	duration := time.Duration(expirationSeconds) * time.Second
+	duration := time.Duration(DEFAULT_TOKEN_EXP_TIME) * time.Second
 	token, err7 := auth.MakeJWT(user.ID, cfg.ChirpySecretKey, duration)
 	if err7 != nil {
 		errorResBody.Error = err7.Error()
@@ -108,13 +106,103 @@ func (cfg *apiConfig) handleLogin(response_writer http.ResponseWriter, req *http
 		return
 	}
 
-	successResBody := createUserORLoginSuccessResponseBody{
-		ID:        user.ID.String(),
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-		Token:     token,
+	refreshTokenString, err9 := auth.MakeRefreshToken()
+	if err9 != nil {
+		errorResBody.Error = err9.Error()
+		jsonResBody, err10 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err10, 400)
+		return
 	}
-	jsonResBody, err9 := json.Marshal(successResBody)
-	writeJSONResponse(response_writer, jsonResBody, err9, 200)
+
+	refresh_token_duration := time.Duration(DEFAULT_REFRESH_TOKEN_EXP_TIME) * time.Second
+	refresh_token_expiration_time := time.Now().Add(refresh_token_duration)
+	createRefreshTokenParams := database.CreateRefreshTokenParams{
+		Token:     refreshTokenString,
+		UserID:    user.ID,
+		ExpiresAt: refresh_token_expiration_time,
+	}
+
+	refreshToken, err11 := cfg.DBQueries.CreateRefreshToken(req.Context(), createRefreshTokenParams)
+	if err11 != nil {
+		errorResBody.Error = "Error while creating new refresh token: " + err11.Error()
+		jsonResBody, err12 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err12, 400)
+		return
+	}
+
+	successResBody := createUserORLoginSuccessResponseBody{
+		ID:           user.ID.String(),
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Email:        user.Email,
+		Token:        token,
+		RefreshToken: refreshToken.Token,
+	}
+	jsonResBody, err13 := json.Marshal(successResBody)
+	writeJSONResponse(response_writer, jsonResBody, err13, 200)
+}
+
+func (cfg *apiConfig) handleRefreshToken(response_writer http.ResponseWriter, req *http.Request) {
+	errorResBody := errorResponseBody{}
+
+	tokenString, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		errorResBody.Error = err.Error()
+		jsonResBody, err2 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err2, 400)
+		return
+	}
+
+	user, err3 := cfg.DBQueries.GetUserFromRefreshToken(req.Context(), tokenString)
+	if err3 != nil {
+		errorResBody.Error = "Error while fetching user by this token: " + err3.Error()
+		jsonResBody, err4 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err4, 401)
+		return
+	}
+
+	if user.ExpiresAt.Before(time.Now()) || user.RevokedAt.Valid {
+		errorResBody.Error = "Your refresh token is invalid, (expired or revoked)!"
+		jsonResBody, err5 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err5, 401)
+		return
+	}
+
+	duration := time.Duration(DEFAULT_TOKEN_EXP_TIME) * time.Second
+	new_token, err6 := auth.MakeJWT(user.ID, cfg.ChirpySecretKey, duration)
+	if err6 != nil {
+		errorResBody.Error = err6.Error()
+		jsonResBody, err7 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err7, 400)
+		return
+	}
+
+	successResBody := refreshSuccessResponseBody{
+		Token: new_token,
+	}
+
+	jsonResBody, err8 := json.Marshal(successResBody)
+	writeJSONResponse(response_writer, jsonResBody, err8, 200)
+}
+
+func (cfg *apiConfig) handleRevokeToken(response_writer http.ResponseWriter, req *http.Request) {
+	errorResBody := errorResponseBody{}
+
+	tokenString, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		errorResBody.Error = err.Error()
+		jsonResBody, err2 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err2, 400)
+		return
+	}
+
+	err3 := cfg.DBQueries.SetRefreshTokenAsRevoked(req.Context(), tokenString)
+	if err != nil {
+		errorResBody.Error = "Error while revoking user's token: " + err3.Error()
+		jsonResBody, err4 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err4, 400)
+		return
+	}
+
+	response_writer.WriteHeader(204)
 }
