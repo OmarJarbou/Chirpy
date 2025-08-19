@@ -58,7 +58,7 @@ func middlewareValidateChirp(next http.Handler) http.Handler {
 
 func middlewareValidatePassword(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response_writer http.ResponseWriter, req *http.Request) {
-		reqBody := createUserRequestBody{}
+		reqBody := userRequestBody{}
 		errorResBody := errorResponseBody{}
 		if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
 			errorResBody.Error = "Error while decoding request's json " + err.Error()
@@ -97,7 +97,7 @@ func (cfg *apiConfig) middlewareAuthorize(next http.Handler) http.Handler {
 		if err != nil {
 			errorResBody.Error = err.Error()
 			jsonResBody, err2 := json.Marshal(errorResBody)
-			writeJSONResponse(response_writer, jsonResBody, err2, 400)
+			writeJSONResponse(response_writer, jsonResBody, err2, 401)
 			return
 		}
 

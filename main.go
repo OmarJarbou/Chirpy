@@ -67,6 +67,7 @@ func main() {
 	serve_mux.HandleFunc("GET /admin/metrics", api_config.numberOfRequestsEncountered)
 	serve_mux.HandleFunc("POST /admin/reset", api_config.resetFileServerHits)
 	serve_mux.Handle("POST /api/users", middlewareValidatePassword(http.HandlerFunc(api_config.handleCreateUser)))
+	serve_mux.Handle("PUT /api/users", api_config.middlewareAuthorize(middlewareValidatePassword(http.HandlerFunc(api_config.handleUpdateUser))))
 	serve_mux.HandleFunc("POST /api/login", api_config.handleLogin)
 	serve_mux.HandleFunc("POST /api/refresh", api_config.handleRefreshToken)
 	serve_mux.HandleFunc("POST /api/revoke", api_config.handleRevokeToken)

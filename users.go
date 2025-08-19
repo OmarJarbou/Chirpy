@@ -7,9 +7,10 @@ import (
 
 	"github.com/OmarJarbou/Chirpy/internal/auth"
 	"github.com/OmarJarbou/Chirpy/internal/database"
+	"github.com/google/uuid"
 )
 
-type createUserRequestBody struct {
+type userRequestBody struct {
 	Password string `json:"password"`
 	Email    string `json:"email"`
 }
@@ -21,6 +22,15 @@ type loginRequestBody struct {
 
 const DEFAULT_TOKEN_EXP_TIME = 3600
 const DEFAULT_REFRESH_TOKEN_EXP_TIME = 60 * 3600
+
+type updateUserSuccessResponseBody struct {
+	ID           string    `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
+}
 
 type createUserORLoginSuccessResponseBody struct {
 	ID           string    `json:"id"`
@@ -205,4 +215,43 @@ func (cfg *apiConfig) handleRevokeToken(response_writer http.ResponseWriter, req
 	}
 
 	response_writer.WriteHeader(204)
+}
+
+func (cfg *apiConfig) handleUpdateUser(response_writer http.ResponseWriter, req *http.Request) {
+	errorResBody := errorResponseBody{}
+	var jsonResBody []byte
+
+	email := req.Context().Value("email").(string)
+	password := req.Context().Value("password").(string)
+	user_id := req.Context().Value("user_id").(uuid.UUID)
+
+	hashed, err := auth.HashPassword(password)
+	if err != nil {
+		errorResBody.Error = err.Error()
+		jsonResBody, err2 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err2, 400)
+		return
+	}
+
+	db_user := database.UpdateUserInfoParams{
+		Email:          email,
+		HashedPassword: hashed,
+		ID:             user_id,
+	}
+	user, err5 := cfg.DBQueries.UpdateUserInfo(req.Context(), db_user)
+	if err5 != nil {
+		errorResBody.Error = "Error while creating user: " + err5.Error()
+		jsonResBody, err6 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err6, 500)
+		return
+	}
+
+	successResBody := updateUserSuccessResponseBody{
+		ID:        user.ID.String(),
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
+	}
+	jsonResBody, err13 := json.Marshal(successResBody)
+	writeJSONResponse(response_writer, jsonResBody, err13, 200)
 }
