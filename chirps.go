@@ -80,7 +80,7 @@ func (cfg *apiConfig) handleGetAllChirps(response_writer http.ResponseWriter, re
 		if err != nil {
 			errorResBody.Error = "Error while fetching chirps for a user from database: " + err.Error()
 			jsonResBody, err5 := json.Marshal(errorResBody)
-			writeJSONResponse(response_writer, jsonResBody, err5, 401)
+			writeJSONResponse(response_writer, jsonResBody, err5, 500)
 			return
 		}
 	}

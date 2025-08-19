@@ -285,7 +285,7 @@ func (cfg *apiConfig) handleDeleteChirp(response_writer http.ResponseWriter, req
 	if err6 != nil {
 		errorResBody.Error = "Error while deleting chirp: " + err6.Error()
 		jsonResBody, err7 := json.Marshal(errorResBody)
-		writeJSONResponse(response_writer, jsonResBody, err7, 403)
+		writeJSONResponse(response_writer, jsonResBody, err7, 500)
 		return
 	}
 
