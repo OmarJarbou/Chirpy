@@ -72,6 +72,7 @@ func main() {
 	serve_mux.HandleFunc("POST /api/refresh", api_config.handleRefreshToken)
 	serve_mux.HandleFunc("POST /api/revoke", api_config.handleRevokeToken)
 	serve_mux.Handle("POST /api/chirps", api_config.middlewareAuthorize(middlewareValidateChirp(http.HandlerFunc(api_config.handleCreateChirp))))
+	serve_mux.Handle("DELETE /api/chirps/{chirpID}", api_config.middlewareAuthorize(http.HandlerFunc(api_config.handleDeleteChirp)))
 	serve_mux.HandleFunc("GET /api/chirps", api_config.handleGetAllChirps)
 	serve_mux.HandleFunc("GET /api/chirps/{chirpID}", api_config.handleGetChirpByID)
 

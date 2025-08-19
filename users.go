@@ -207,7 +207,7 @@ func (cfg *apiConfig) handleRevokeToken(response_writer http.ResponseWriter, req
 	}
 
 	err3 := cfg.DBQueries.SetRefreshTokenAsRevoked(req.Context(), tokenString)
-	if err != nil {
+	if err3 != nil {
 		errorResBody.Error = "Error while revoking user's token: " + err3.Error()
 		jsonResBody, err4 := json.Marshal(errorResBody)
 		writeJSONResponse(response_writer, jsonResBody, err4, 400)
@@ -254,4 +254,45 @@ func (cfg *apiConfig) handleUpdateUser(response_writer http.ResponseWriter, req 
 	}
 	jsonResBody, err13 := json.Marshal(successResBody)
 	writeJSONResponse(response_writer, jsonResBody, err13, 200)
+}
+
+func (cfg *apiConfig) handleDeleteChirp(response_writer http.ResponseWriter, req *http.Request) {
+	errorResBody := errorResponseBody{}
+
+	user_id := req.Context().Value("user_id").(uuid.UUID)
+
+	chirp_id := req.PathValue("chirpID")
+
+	chirp_uuid, err := uuid.Parse(chirp_id)
+	if err != nil {
+		errorResBody.Error = "Error while parsing chirp id string to uuid: " + err.Error()
+		jsonResBody, err2 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err2, 400)
+		return
+	}
+
+	chirp, err3 := cfg.DBQueries.GetChirpById(req.Context(), chirp_uuid)
+	if err3 != nil {
+		errorResBody.Error = "No chirp with this id: " + err3.Error()
+		jsonResBody, err4 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err4, 404)
+		return
+	}
+
+	if chirp.UserID != user_id {
+		errorResBody.Error = "You don't have access to do anything on this chirp: "
+		jsonResBody, err5 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err5, 403)
+		return
+	}
+
+	err6 := cfg.DBQueries.DeleteChirpById(req.Context(), chirp.ID)
+	if err6 != nil {
+		errorResBody.Error = "Error while deleting chirp: " + err6.Error()
+		jsonResBody, err7 := json.Marshal(errorResBody)
+		writeJSONResponse(response_writer, jsonResBody, err7, 403)
+		return
+	}
+
+	response_writer.WriteHeader(204)
 }
